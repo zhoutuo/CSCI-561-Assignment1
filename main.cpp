@@ -499,32 +499,32 @@ int main(int argc, char **argv) {
 
 	string tmp;
 
-	if (argc == 9) {
-		if (strcmp(argv[2], "BFS") == 0) {
+	if (argc == 8) {
+		if (strcmp(argv[1], "BFS") == 0) {
 			functionIndex = 0;
-		} else if (strcmp(argv[2], "DFS") == 0) {
+		} else if (strcmp(argv[1], "DFS") == 0) {
 			functionIndex = 1;
-		} else if (strcmp(argv[2], "Astar") == 0) {
+		} else if (strcmp(argv[1], "Astar") == 0) {
 			functionIndex = 2;
-		} else if (strcmp(argv[2], "Beam") == 0) {
+		} else if (strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
 		} else {
 			errorFlag = true;
 		}
 
 		if (!errorFlag) {
-			start.speed = atof(argv[4]);
-			input.open(argv[6]);
-			output.open(argv[8]);
+			start.speed = atof(argv[3]);
+			input.open(argv[5]);
+			output.open(argv[7]);
 		}
 
-	} else if (argc == 11) {
-		if (strcmp(argv[2], "Beam") == 0) {
+	} else if (argc == 10) {
+		if (strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
-			beamK = atoi(argv[4]);
-			start.speed = atof(argv[6]);
-			input.open(argv[8]);
-			output.open(argv[10]);
+			beamK = atoi(argv[3]);
+			start.speed = atof(argv[5]);
+			input.open(argv[7]);
+			output.open(argv[9]);
 		} else {
 			errorFlag = true;
 		}

@@ -1,0 +1,5 @@
+Author: Zhoutuo Yang
+
+1. In the folder, run make command to output the program named "search"
+2. Use search program to run algorithms, for e.g. ./search BFS -s 2 -i input1.txt -o output.txt
+3. It will run the algorithm assigned, output a file and output the running time to the console.

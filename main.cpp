@@ -210,7 +210,6 @@ void DFS() {
 	Point zero;
 	zero.x = zero.y = zero.step = 0;
 	parentTable[start.y][start.x] = zero;
-	;
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
@@ -407,7 +406,7 @@ void BS(bool isH1) {
 
 	priority_queue<Point> frontier;
 
-	start.h = distance(start, isH1);
+	start.h = distance(start, isH1) / start.speed;
 	setFlag(start);
 	frontier.push(start);
 

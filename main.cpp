@@ -32,8 +32,8 @@ unsigned int beamK = 10;
 char maze[100][100];
 bool flags[100][100];
 Point parentTable[100][100];
-int delX[4] = { 0, 0, -1, 1 };
-int delY[4] = { -1, 1, 0, 0 };
+int delX[4] = { 0, -1, 0, 1 };
+int delY[4] = { -1, 0, 1, 0 };
 
 template<class T>
 string fromNumber(T n) {
@@ -60,8 +60,8 @@ void logPoint(string& searchLog, Point cur, bool outputH) {
 	searchLog += " g = ";
 	searchLog += fromNumber(cur.g);
 	if (outputH) {
-		searchLog += " h = ";
-		searchLog += fromNumber(cur.h);
+		searchLog += " f = ";
+		searchLog += fromNumber(cur.g + cur.h);
 	}
 	searchLog += '\n';
 }
@@ -95,7 +95,7 @@ void logFrontier(string& searchLog, deque<Point>& que) {
 void logFrontier(string& searchLog, vector<Point>& stack) {
 	searchLog += "Frontier List:\n";
 	for (unsigned int i = 0; i < stack.size(); ++i) {
-		logChild(searchLog, i, stack[i], false);
+		logChild(searchLog, i, stack[stack.size() - i - 1], false);
 	}
 	searchLog += '\n';
 }
@@ -113,9 +113,7 @@ void logFrontier(string& searchLog, priority_queue<Point>& que) {
 	searchLog += '\n';
 }
 
-
-void logPath(string& pathLog, Point table[100][100], Point cur,
-		bool outputH) {
+void logPath(string& pathLog, Point table[100][100], Point cur, bool outputH) {
 	if (cur.step != 1) {
 		logPath(pathLog, table, table[cur.y][cur.x], outputH);
 	}
@@ -123,7 +121,7 @@ void logPath(string& pathLog, Point table[100][100], Point cur,
 }
 
 void logPathLength(string& pathLog, Point goal, int iteration,
-		Point parentTable[100][100] , bool outputH) {
+		Point parentTable[100][100], bool outputH) {
 	//find the goal
 	pathLog += "Number of Iteration = ";
 	pathLog += fromNumber(iteration);
@@ -166,13 +164,16 @@ void BFS() {
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if (getFlag(newPos) || sign == '*') {
+				if (sign == '*') {
 					continue;
 				}
-				parentTable[newPos.y][newPos.x] = cur;
 
 				logChild(searchLog, indexOfChildren, newPos, false);
 				++indexOfChildren;
+				if (getFlag(newPos)) {
+					continue;
+				}
+				parentTable[newPos.y][newPos.x] = cur;
 
 				switch (sign) {
 				case 'M':
@@ -208,7 +209,8 @@ void DFS() {
 	setFlag(start);
 	Point zero;
 	zero.x = zero.y = zero.step = 0;
-    parentTable[start.y][start.x] = zero;;
+	parentTable[start.y][start.x] = zero;
+	;
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
@@ -233,13 +235,18 @@ void DFS() {
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if (getFlag(newPos) || sign == '*') {
+				if (sign == '*') {
 					continue;
 				}
-				parentTable[newPos.y][newPos.x] = cur;
 
 				logChild(searchLog, indexOfChildren, newPos, false);
 				++indexOfChildren;
+
+				if (getFlag(newPos)) {
+					continue;
+				}
+
+				parentTable[newPos.y][newPos.x] = cur;
 
 				switch (sign) {
 				case 'M':
@@ -286,14 +293,12 @@ enum AstarState {
 	UNEXPOLDED, EXPLODED, EXPLODING
 };
 
-
-
 void Astar(bool isH1) {
 
 	priority_queue<Point> que;
 	AstarState stateMap[100][100];
-	for(int i = 0; i < 100; ++i) {
-		for(int j = 0; j < 100; ++j) {
+	for (int i = 0; i < 100; ++i) {
+		for (int j = 0; j < 100; ++j) {
 			stateMap[i][j] = UNEXPOLDED;
 		}
 	}
@@ -333,20 +338,26 @@ void Astar(bool isH1) {
 
 				AstarState curState = stateMap[newPos.y][newPos.x];
 
-				if (sign == '*' || curState == EXPLODED) {
+				if (sign == '*') {
 					continue;
-				} else if(curState == EXPLODING) {
+				}
+
+				logChild(searchLog, indexOfChildren, newPos, true);
+				++indexOfChildren;
+				if (curState == EXPLODED) {
+					continue;
+				} else if (curState == EXPLODING) {
 					priority_queue<Point> tmp = que;
 					priority_queue<Point> emp;
-					while(true) {
+					while (true) {
 						Point top = tmp.top();
 						tmp.pop();
-						if(newPos.x == top.x && newPos.y == top.y) {
-							if(newPos.g < top.g) {
+						if (newPos.x == top.x && newPos.y == top.y) {
+							if (newPos.g < top.g) {
 
 								parentTable[newPos.y][newPos.x] = cur;
 								emp.push(newPos);
-								while(!tmp.empty()) {
+								while (!tmp.empty()) {
 									emp.push(tmp.top());
 									tmp.pop();
 								}
@@ -360,12 +371,7 @@ void Astar(bool isH1) {
 					continue;
 				}
 
-
 				parentTable[newPos.y][newPos.x] = cur;
-
-
-				logChild(searchLog, indexOfChildren, newPos, true);
-				++indexOfChildren;
 
 				switch (sign) {
 				case 'M':
@@ -413,68 +419,69 @@ void BS(bool isH1) {
 	int iteration = 1;
 	bool isFound = false;
 
-	while(!isFound && !frontier.empty()) {
+	while (!isFound && !frontier.empty()) {
 		Point cur = frontier.top();
 		frontier.pop();
 		logIteration(searchLog, iteration, cur, true);
 
-			if(cur.speed > 0) {
-				int indexOfChildren = 0;
-				for(int j = 0; j < 4; ++j) {
-					int newX = cur.x + delX[j];
-					int newY = cur.y + delY[j];
-					Point child = cur;
-					char sign = maze[newY][newX];
-					child.x = newX;
-					child.y = newY;
-					child.g += 1 / child.speed;
-					child.h = distance(child, isH1) / child.speed;
-					++child.step;
+		if (cur.speed > 0) {
+			int indexOfChildren = 0;
+			for (int j = 0; j < 4; ++j) {
+				int newX = cur.x + delX[j];
+				int newY = cur.y + delY[j];
+				Point child = cur;
+				char sign = maze[newY][newX];
+				child.x = newX;
+				child.y = newY;
+				child.g += 1 / child.speed;
+				child.h = distance(child, isH1) / child.speed;
+				++child.step;
 
-					if(sign == '*' || getFlag(child)) {
-						continue;
-					}
-
-
-					parentTable[child.y][child.x] = cur;
-
-
-					logChild(searchLog, indexOfChildren, child, true);
-					++indexOfChildren;
-
-					switch (sign) {
-					case 'M':
-						child.speed -= 0.1;
-						child.h = distance(child, isH1) / child.speed;
-
-						/* no break */
-					case ' ':
-						setFlag(child);
-						frontier.push(child);
-						if(frontier.size() > beamK) {
-							priority_queue<Point> tmp;
-							int t = beamK;
-							while(t--) {
-								tmp.push(frontier.top());
-								frontier.pop();
-							}
-							frontier = tmp;
-						}
-						break;
-					case 'G':
-
-						logPathLength(pathLog, child, iteration, parentTable,
-								true);
-						//dump to output file
-						isFound = true;
-						break;
-					}
-
+				if (sign == '*') {
+					continue;
 				}
-			}
 
-			logFrontier(searchLog, frontier);
-			++iteration;
+				logChild(searchLog, indexOfChildren, child, false);
+				++indexOfChildren;
+
+				if (getFlag (child)) {
+					continue;
+				}
+
+				parentTable[child.y][child.x] = cur;
+
+				switch (sign) {
+				case 'M':
+					child.speed -= 0.1;
+					child.h = distance(child, isH1) / child.speed;
+
+					/* no break */
+				case ' ':
+					setFlag(child);
+					frontier.push(child);
+					if (frontier.size() > beamK) {
+						priority_queue<Point> tmp;
+						int t = beamK;
+						while (t--) {
+							tmp.push(frontier.top());
+							frontier.pop();
+						}
+						frontier = tmp;
+					}
+					break;
+				case 'G':
+
+					logPathLength(pathLog, child, iteration, parentTable, true);
+					//dump to output file
+					isFound = true;
+					break;
+				}
+
+			}
+		}
+
+		logFrontier(searchLog, frontier);
+		++iteration;
 	}
 
 	if (isFound) {
@@ -590,5 +597,5 @@ int main(int argc, char **argv) {
 	input.close();
 	output.close();
 
-	cout << (float)(clock() - startT) / CLOCKS_PER_SEC << endl;
+	cout << (float) (clock() - startT) / CLOCKS_PER_SEC << endl;
 }

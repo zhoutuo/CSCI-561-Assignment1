@@ -1,7 +1,6 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <cstring>
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
@@ -24,7 +23,6 @@ struct Point {
 	bool operator <(const Point& other) const {
 		return (g + h) > (other.g + other.h);
 	}
-
 };
 
 struct classcmp {
@@ -35,7 +33,8 @@ struct classcmp {
 
 typedef set<float, classcmp> speed_set;
 typedef map<float, Point, classcmp> speed_map;
-
+typedef vector<float> speed_arr;
+typedef vector<Point> speed_arr_content;
 //global variables
 ofstream output;
 Point start, goal;
@@ -43,6 +42,10 @@ unsigned int beamK = 10;
 char maze[100][100];
 speed_set flags[100][100];
 speed_map parentTable[100][100];
+
+speed_arr speeds[100][100];
+speed_arr_content contents[100][100];
+
 int delX[4] = { 0, -1, 0, 1 };
 int delY[4] = { -1, 0, 1, 0 };
 
@@ -68,18 +71,36 @@ void setFlag(Point point) {
 }
 
 void setParent(Point child, Point Parent) {
-	speed_map& cur = parentTable[child.y][child.x];
-	cur[child.speed] = Parent;
+    speed_arr& cur = speeds[child.y][child.x];
+    speed_arr_content& con = contents[child.y][child.x];
+
+    cur.push_back(child.speed);
+    con.push_back(Parent);
 }
 
 bool findParent(Point child) {
-    speed_map& cur = parentTable[child.y][child.x];
-    if(cur.find(child.speed) == cur.end()) {
-        return false;
-    } else {
-        return true;
+    speed_arr& cur = speeds[child.y][child.x];
+    float epison = 1e-5;
+    for(unsigned int i = 0; i < cur.size(); ++i) {
+    	if(abs(child.speed - cur[i]) < epison) {
+    		return true;
+    	}
     }
+    return false;
 }
+
+
+Point getParent(Point child) {
+    speed_arr& cur = speeds[child.y][child.x];
+    float epison = 1e-5;
+    for(unsigned int i = 0; i < cur.size(); ++i) {
+    	if(abs(child.speed - cur[i]) < epison) {
+    		return contents[child.y][child.x][i];
+    	}
+    }
+    return Point();
+}
+
 
 void logPoint(string& searchLog, Point cur, bool outputH) {
 	searchLog += "x = ";
@@ -148,7 +169,7 @@ void logFrontier(string& searchLog, priority_queue<Point>& que) {
 
 void logPath(string& pathLog, Point cur, bool outputH) {
 	if (cur.step != 1) {
-		Point parent = parentTable[cur.y][cur.x][cur.speed];
+		Point parent = getParent(cur);
 		logPath(pathLog, parent, outputH);
 	}
 	logPoint(pathLog, cur, outputH);
@@ -216,7 +237,7 @@ void BFS() {
 					que.push_back(newPos);
 					break;
 				case 'G':
-					logPathLength(pathLog, newPos, iteration, false);
+					//logPathLength(pathLog, newPos, iteration, false);
 					//dump to output file
 					isFound = true;
 					break;

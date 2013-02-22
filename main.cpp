@@ -64,14 +64,21 @@ bool getFlag(Point point) {
 
 void setFlag(Point point) {
 	speed_set& cur = flags[point.y][point.x];
-	if(cur.find(point.speed) == cur.end()) {
-		cur.insert(point.speed);
-	}
+    cur.insert(point.speed);
 }
 
 void setParent(Point child, Point Parent) {
 	speed_map& cur = parentTable[child.y][child.x];
 	cur[child.speed] = Parent;
+}
+
+bool findParent(Point child) {
+    speed_map& cur = parentTable[child.y][child.x];
+    if(cur.find(child.speed) == cur.end()) {
+        return false;
+    } else {
+        return true;
+    }
 }
 
 void logPoint(string& searchLog, Point cur, bool outputH) {
@@ -197,7 +204,7 @@ void BFS() {
 
 				logChild(searchLog, indexOfChildren, newPos, false);
 				++indexOfChildren;
-				if (getFlag(newPos)) {
+				if (findParent(newPos)) {
 					continue;
 				}
 				setParent(newPos, cur);
@@ -206,7 +213,6 @@ void BFS() {
 					newPos.speed -= 0.1;
 					/* no break */
 				case ' ':
-					setFlag(newPos);
 					que.push_back(newPos);
 					break;
 				case 'G':
@@ -514,7 +520,6 @@ int main(int argc, char **argv) {
 
 	ifstream input;
 
-	memset(maze, '*', sizeof(maze));
 	int width;
 	int height;
 

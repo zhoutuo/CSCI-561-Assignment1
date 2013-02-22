@@ -8,6 +8,8 @@
 #include <deque>
 #include <queue>
 #include <vector>
+#include <set>
+#include <map>
 #include <ctime>
 using namespace std;
 
@@ -25,13 +27,22 @@ struct Point {
 
 };
 
+struct classcmp {
+	bool operator () (const float& left, const float& right) const {
+		return (abs(left - right) > (1e-5)) && (left < right);
+	}
+};
+
+typedef set<float, classcmp> speed_set;
+typedef map<float, Point, classcmp> speed_map;
+
 //global variables
 ofstream output;
 Point start, goal;
 unsigned int beamK = 10;
 char maze[100][100];
-bool flags[100][100];
-Point parentTable[100][100];
+speed_set flags[100][100];
+speed_map parentTable[100][100];
 int delX[4] = { 0, -1, 0, 1 };
 int delY[4] = { -1, 0, 1, 0 };
 
@@ -43,11 +54,24 @@ string fromNumber(T n) {
 }
 
 bool getFlag(Point point) {
-	return flags[point.y][point.x];
+	speed_set& cur = flags[point.y][point.x];
+	if(cur.find(point.speed) == cur.end()) {
+		return false;
+	} else {
+		return true;
+	}
 }
 
 void setFlag(Point point) {
-	flags[point.y][point.x] = true;
+	speed_set& cur = flags[point.y][point.x];
+	if(cur.find(point.speed) == cur.end()) {
+		cur.insert(point.speed);
+	}
+}
+
+void setParent(Point child, Point Parent) {
+	speed_map& cur = parentTable[child.y][child.x];
+	cur[child.speed] = Parent;
 }
 
 void logPoint(string& searchLog, Point cur, bool outputH) {
@@ -68,13 +92,15 @@ void logPoint(string& searchLog, Point cur, bool outputH) {
 
 void logIteration(string& searchLog, int iteration, Point cur, bool outputH) {
 	//logging
-	searchLog += "Iteration = ";
-	searchLog += fromNumber(iteration);
-	searchLog += '\n';
+	if (iteration <= 100) {
+		searchLog += "Iteration = ";
+		searchLog += fromNumber(iteration);
+		searchLog += '\n';
 
-	searchLog += "Current Node : ";
-	logPoint(searchLog, cur, outputH);
-	searchLog += "Child List:\n";
+		searchLog += "Current Node : ";
+		logPoint(searchLog, cur, outputH);
+		searchLog += "Child List:\n";
+	}
 }
 
 void logChild(string& searchLog, int index, Point cur, bool outputH) {
@@ -113,15 +139,15 @@ void logFrontier(string& searchLog, priority_queue<Point>& que) {
 	searchLog += '\n';
 }
 
-void logPath(string& pathLog, Point table[100][100], Point cur, bool outputH) {
+void logPath(string& pathLog, Point cur, bool outputH) {
 	if (cur.step != 1) {
-		logPath(pathLog, table, table[cur.y][cur.x], outputH);
+		Point parent = parentTable[cur.y][cur.x][cur.speed];
+		logPath(pathLog, parent, outputH);
 	}
 	logPoint(pathLog, cur, outputH);
 }
 
-void logPathLength(string& pathLog, Point goal, int iteration,
-		Point parentTable[100][100], bool outputH) {
+void logPathLength(string& pathLog, Point goal, int iteration, bool outputH) {
 	//find the goal
 	pathLog += "Number of Iteration = ";
 	pathLog += fromNumber(iteration);
@@ -129,7 +155,7 @@ void logPathLength(string& pathLog, Point goal, int iteration,
 	pathLog += "Path length = ";
 	pathLog += fromNumber(goal.step);
 	pathLog += "\n";
-	logPath(pathLog, parentTable, goal, outputH);
+	logPath(pathLog, goal, outputH);
 	pathLog += "----------------------------------\n";
 }
 
@@ -139,7 +165,8 @@ void BFS() {
 	setFlag(start);
 	Point zero;
 	zero.x = zero.y = zero.step = 0;
-	parentTable[start.y][start.x] = zero;
+	zero.speed = 0.0f;
+	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
@@ -173,8 +200,7 @@ void BFS() {
 				if (getFlag(newPos)) {
 					continue;
 				}
-				parentTable[newPos.y][newPos.x] = cur;
-
+				setParent(newPos, cur);
 				switch (sign) {
 				case 'M':
 					newPos.speed -= 0.1;
@@ -184,8 +210,7 @@ void BFS() {
 					que.push_back(newPos);
 					break;
 				case 'G':
-					logPathLength(pathLog, newPos, iteration, parentTable,
-							false);
+					logPathLength(pathLog, newPos, iteration, false);
 					//dump to output file
 					isFound = true;
 					break;
@@ -209,7 +234,7 @@ void DFS() {
 	setFlag(start);
 	Point zero;
 	zero.x = zero.y = zero.step = 0;
-	parentTable[start.y][start.x] = zero;
+	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
@@ -244,9 +269,7 @@ void DFS() {
 				if (getFlag(newPos)) {
 					continue;
 				}
-
-				parentTable[newPos.y][newPos.x] = cur;
-
+				setParent(newPos, cur);
 				switch (sign) {
 				case 'M':
 					newPos.speed -= 0.1;
@@ -257,8 +280,7 @@ void DFS() {
 					stack.push_back(newPos);
 					break;
 				case 'G':
-					logPathLength(pathLog, newPos, iteration, parentTable,
-							false);
+					logPathLength(pathLog, newPos, iteration, false);
 					isFound = true;
 					break;
 
@@ -307,7 +329,7 @@ void Astar(bool isH1) {
 
 	Point zero;
 	zero.x = zero.y = zero.step = 0;
-	parentTable[start.y][start.x] = zero;
+	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
@@ -353,8 +375,7 @@ void Astar(bool isH1) {
 						tmp.pop();
 						if (newPos.x == top.x && newPos.y == top.y) {
 							if (newPos.g < top.g) {
-
-								parentTable[newPos.y][newPos.x] = cur;
+								setParent(newPos, cur);
 								emp.push(newPos);
 								while (!tmp.empty()) {
 									emp.push(tmp.top());
@@ -369,9 +390,7 @@ void Astar(bool isH1) {
 					}
 					continue;
 				}
-
-				parentTable[newPos.y][newPos.x] = cur;
-
+				setParent(newPos, cur);
 				switch (sign) {
 				case 'M':
 					newPos.speed -= 0.1;
@@ -382,8 +401,7 @@ void Astar(bool isH1) {
 					que.push(newPos);
 					break;
 				case 'G':
-					logPathLength(pathLog, newPos, iteration, parentTable,
-							true);
+					logPathLength(pathLog, newPos, iteration, true);
 					//dump to output file
 					isFound = true;
 					break;
@@ -412,7 +430,7 @@ void BS(bool isH1) {
 
 	Point zero;
 	zero.x = zero.y = zero.step = 0;
-	parentTable[start.y][start.x] = zero;
+	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
@@ -446,9 +464,7 @@ void BS(bool isH1) {
 				if (getFlag (child)) {
 					continue;
 				}
-
-				parentTable[child.y][child.x] = cur;
-
+				setParent(child, cur);
 				switch (sign) {
 				case 'M':
 					child.speed -= 0.1;
@@ -470,7 +486,7 @@ void BS(bool isH1) {
 					break;
 				case 'G':
 
-					logPathLength(pathLog, child, iteration, parentTable, true);
+					logPathLength(pathLog, child, iteration, true);
 					//dump to output file
 					isFound = true;
 					break;
@@ -499,7 +515,6 @@ int main(int argc, char **argv) {
 	ifstream input;
 
 	memset(maze, '*', sizeof(maze));
-	memset(flags, 0, sizeof(flags));
 	int width;
 	int height;
 

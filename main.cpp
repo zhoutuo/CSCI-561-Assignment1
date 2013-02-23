@@ -1,6 +1,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
@@ -26,26 +27,19 @@ struct Point {
 };
 
 struct classcmp {
-	bool operator () (const float& left, const float& right) const {
+	bool operator()(const float& left, const float& right) const {
 		return (abs(left - right) > (1e-5)) && (left < right);
 	}
 };
 
-typedef set<float, classcmp> speed_set;
 typedef map<float, Point, classcmp> speed_map;
-typedef vector<float> speed_arr;
-typedef vector<Point> speed_arr_content;
+
 //global variables
 ofstream output;
 Point start, goal;
 unsigned int beamK = 10;
 char maze[100][100];
-speed_set flags[100][100];
 speed_map parentTable[100][100];
-
-speed_arr speeds[100][100];
-speed_arr_content contents[100][100];
-
 int delX[4] = { 0, -1, 0, 1 };
 int delY[4] = { -1, 0, 1, 0 };
 
@@ -56,49 +50,25 @@ string fromNumber(T n) {
 	return ss.str();
 }
 
-bool getFlag(Point point) {
-	speed_set& cur = flags[point.y][point.x];
-	if(cur.find(point.speed) == cur.end()) {
+
+void setParent(Point child, Point Parent) {
+	speed_map& cur = parentTable[child.y][child.x];
+	cur[child.speed] = Parent;
+}
+
+bool findParent(Point child) {
+	speed_map& cur = parentTable[child.y][child.x];
+	if(cur.find(child.speed) == cur.end()) {
 		return false;
 	} else {
 		return true;
 	}
 }
 
-void setFlag(Point point) {
-	speed_set& cur = flags[point.y][point.x];
-    cur.insert(point.speed);
-}
-
-void setParent(Point child, Point Parent) {
-    speed_arr& cur = speeds[child.y][child.x];
-    speed_arr_content& con = contents[child.y][child.x];
-
-    cur.push_back(child.speed);
-    con.push_back(Parent);
-}
-
-bool findParent(Point child) {
-    speed_arr& cur = speeds[child.y][child.x];
-    float epison = 1e-5;
-    for(unsigned int i = 0; i < cur.size(); ++i) {
-    	if(abs(child.speed - cur[i]) < epison) {
-    		return true;
-    	}
-    }
-    return false;
-}
-
 
 Point getParent(Point child) {
-    speed_arr& cur = speeds[child.y][child.x];
-    float epison = 1e-5;
-    for(unsigned int i = 0; i < cur.size(); ++i) {
-    	if(abs(child.speed - cur[i]) < epison) {
-    		return contents[child.y][child.x][i];
-    	}
-    }
-    return Point();
+	speed_map& cur = parentTable[child.y][child.x];
+	return cur[child.speed];
 }
 
 
@@ -111,7 +81,7 @@ void logPoint(string& searchLog, Point cur, bool outputH) {
 	searchLog += fromNumber(cur.speed);
 	searchLog += " g = ";
 	searchLog += fromNumber(cur.g);
-	if (outputH) {
+	if(outputH) {
 		searchLog += " f = ";
 		searchLog += fromNumber(cur.g + cur.h);
 	}
@@ -120,11 +90,10 @@ void logPoint(string& searchLog, Point cur, bool outputH) {
 
 void logIteration(string& searchLog, int iteration, Point cur, bool outputH) {
 	//logging
-	if (iteration <= 100) {
+	if(iteration <= 100) {
 		searchLog += "Iteration = ";
 		searchLog += fromNumber(iteration);
 		searchLog += '\n';
-
 		searchLog += "Current Node : ";
 		logPoint(searchLog, cur, outputH);
 		searchLog += "Child List:\n";
@@ -140,7 +109,7 @@ void logChild(string& searchLog, int index, Point cur, bool outputH) {
 
 void logFrontier(string& searchLog, deque<Point>& que) {
 	searchLog += "Frontier List:\n";
-	for (unsigned int i = 0; i < que.size(); ++i) {
+	for(unsigned int i = 0; i < que.size(); ++i) {
 		logChild(searchLog, i, que[i], false);
 	}
 	searchLog += '\n';
@@ -148,7 +117,7 @@ void logFrontier(string& searchLog, deque<Point>& que) {
 
 void logFrontier(string& searchLog, vector<Point>& stack) {
 	searchLog += "Frontier List:\n";
-	for (unsigned int i = 0; i < stack.size(); ++i) {
+	for(unsigned int i = 0; i < stack.size(); ++i) {
 		logChild(searchLog, i, stack[stack.size() - i - 1], false);
 	}
 	searchLog += '\n';
@@ -158,17 +127,16 @@ void logFrontier(string& searchLog, priority_queue<Point>& que) {
 	searchLog += "Frontier List:\n";
 	priority_queue<Point> tmp = que;
 	int index = 0;
-	while (!tmp.empty()) {
+	while(!tmp.empty()) {
 		Point cur = tmp.top();
 		tmp.pop();
 		logChild(searchLog, index++, cur, true);
 	}
-
 	searchLog += '\n';
 }
 
 void logPath(string& pathLog, Point cur, bool outputH) {
-	if (cur.step != 1) {
+	if(cur.step != 1) {
 		Point parent = getParent(cur);
 		logPath(pathLog, parent, outputH);
 	}
@@ -190,66 +158,56 @@ void logPathLength(string& pathLog, Point goal, int iteration, bool outputH) {
 void BFS() {
 	deque<Point> que;
 	que.push_back(start);
-	setFlag(start);
-	Point zero;
-	zero.x = zero.y = zero.step = 0;
-	zero.speed = 0.0f;
-	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-
-	while (!isFound && !que.empty()) {
+	while(!isFound && !que.empty()) {
 		Point cur = que.front();
 		que.pop_front();
 		int x = cur.x;
 		int y = cur.y;
-
 		logIteration(searchLog, iteration, cur, false);
-		if (cur.speed > 0) {
+		if(cur.speed > 0) {
 			int indexOfChildren = 0;
-			for (int i = 0; i < 4; ++i) {
+			for(int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
-
 				char sign = maze[newY][newX];
 				Point newPos = cur;
 				newPos.x = newX;
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if (sign == '*') {
+				if(sign == '*') {
 					continue;
 				}
-
-				logChild(searchLog, indexOfChildren, newPos, false);
+				if(iteration <= 100) {
+					logChild(searchLog, indexOfChildren, newPos, false);
+				}
 				++indexOfChildren;
-				if (findParent(newPos)) {
-					continue;
-				}
-				setParent(newPos, cur);
-				switch (sign) {
-				case 'M':
+				if(sign == 'M') {
 					newPos.speed -= 0.1;
-					/* no break */
-				case ' ':
-					que.push_back(newPos);
-					break;
-				case 'G':
-					//logPathLength(pathLog, newPos, iteration, false);
-					//dump to output file
-					isFound = true;
-					break;
 				}
-
+				if(findParent(newPos)) {
+					continue;
+				} else {
+					setParent(newPos, cur);
+				}
+				if(sign == 'G') {
+					logPathLength(pathLog, newPos, iteration, false);
+					isFound = true;
+				} else {
+					que.push_back(newPos);
+				}
 			}
 		}
-		logFrontier(searchLog, que);
+		if(iteration <= 100) {
+			logFrontier(searchLog, que);
+		}
 		++iteration;
 	}
-
-	if (isFound) {
+	if(isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
@@ -258,68 +216,56 @@ void BFS() {
 void DFS() {
 	vector<Point> stack;
 	stack.push_back(start);
-	setFlag(start);
-	Point zero;
-	zero.x = zero.y = zero.step = 0;
-	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-
-	while (!isFound && !stack.empty()) {
+	while(!isFound && !stack.empty()) {
 		Point cur = stack.back();
 		stack.pop_back();
 		int x = cur.x;
 		int y = cur.y;
-
 		logIteration(searchLog, iteration, cur, false);
-		if (cur.speed > 0) {
+		if(cur.speed > 0) {
 			int indexOfChildren = 0;
-			for (int i = 0; i < 4; ++i) {
+			for(int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
-
 				char sign = maze[newY][newX];
 				Point newPos = cur;
 				newPos.x = newX;
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if (sign == '*') {
+				if(sign == '*') {
 					continue;
 				}
-
-				logChild(searchLog, indexOfChildren, newPos, false);
+				if(iteration <= 100) {
+					logChild(searchLog, indexOfChildren, newPos, false);
+				}
 				++indexOfChildren;
-
-				if (getFlag(newPos)) {
-					continue;
-				}
-				setParent(newPos, cur);
-				switch (sign) {
-				case 'M':
+				if(sign == 'M') {
 					newPos.speed -= 0.1;
-					/* no break */
-				case ' ':
-
-					setFlag(newPos);
-					stack.push_back(newPos);
-					break;
-				case 'G':
+				}
+				if(findParent(newPos)) {
+					continue;
+				} else {
+					setParent(newPos, cur);
+				}
+				if(sign == 'G') {
 					logPathLength(pathLog, newPos, iteration, false);
 					isFound = true;
-					break;
-
+				} else {
+					stack.push_back(newPos);
 				}
-
 			}
 		}
-		logFrontier(searchLog, stack);
+		if(iteration <= 100) {
+			logFrontier(searchLog, stack);
+		}
 		++iteration;
 	}
-
-	if (isFound) {
+	if(isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
@@ -328,54 +274,41 @@ void DFS() {
 float distance(Point cur, bool isH1) {
 	int delX = cur.x - goal.x;
 	int delY = cur.y - goal.y;
-
-	if (isH1) {
+	if(isH1) {
 		return abs(delX) + abs(delY);
 	} else {
 		return sqrt(delX * delX + delY * delY);
 	}
-
 }
 
 enum AstarState {
-	UNEXPOLDED, EXPLODED, EXPLODING
+    UNEXPOLDED, EXPLODED, EXPLODING
 };
 
-void Astar(bool isH1) {
+typedef map<float, AstarState> amap;
 
+void Astar(bool isH1) {
 	priority_queue<Point> que;
-	AstarState stateMap[100][100];
-	for (int i = 0; i < 100; ++i) {
-		for (int j = 0; j < 100; ++j) {
-			stateMap[i][j] = UNEXPOLDED;
-		}
-	}
+	amap stateMap[100][100];
 	start.h = distance(start, isH1) / start.speed;
 	que.push(start);
-	stateMap[start.y][start.x] = EXPLODING;
-
-	Point zero;
-	zero.x = zero.y = zero.step = 0;
-	setParent(start, zero);
+	stateMap[start.y][start.x][start.speed] = EXPLODING;
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-
-	while (!isFound && !que.empty()) {
+	while(!isFound && !que.empty()) {
 		Point cur = que.top();
 		que.pop();
-		stateMap[cur.y][cur.x] = EXPLODED;
+		stateMap[cur.y][cur.x][cur.speed] = EXPLODED;
 		int x = cur.x;
 		int y = cur.y;
-
 		logIteration(searchLog, iteration, cur, true);
-		if (cur.speed > 0) {
+		if(cur.speed > 0) {
 			int indexOfChildren = 0;
-			for (int i = 0; i < 4; ++i) {
+			for(int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
-
 				char sign = maze[newY][newX];
 				Point newPos = cur;
 				newPos.x = newX;
@@ -384,27 +317,33 @@ void Astar(bool isH1) {
 				newPos.h = distance(newPos, isH1) / newPos.speed;
 				++newPos.step;
 
-				AstarState curState = stateMap[newPos.y][newPos.x];
+				amap& curMap = stateMap[newPos.y][newPos.x];
 
-				if (sign == '*') {
-					continue;
+				if(curMap.find(cur.speed) == curMap.end()) {
+                    curMap[cur.speed] = UNEXPOLDED;
 				}
 
-				logChild(searchLog, indexOfChildren, newPos, true);
-				++indexOfChildren;
-				if (curState == EXPLODED) {
+				AstarState& curState = curMap[cur.speed];
+				if(sign == '*') {
 					continue;
-				} else if (curState == EXPLODING) {
+				}
+				if(iteration <= 100) {
+					logChild(searchLog, indexOfChildren, newPos, true);
+				}
+				++indexOfChildren;
+				if(curState == EXPLODED) {
+					continue;
+				} else if(curState == EXPLODING) {
 					priority_queue<Point> tmp = que;
 					priority_queue<Point> emp;
-					while (true) {
+					while(true) {
 						Point top = tmp.top();
 						tmp.pop();
-						if (newPos.x == top.x && newPos.y == top.y) {
-							if (newPos.g < top.g) {
+						if(newPos.x == top.x && newPos.y == top.y && abs(newPos.speed - top.speed) < (1e-5)) {
+							if(newPos.g < top.g) {
 								setParent(newPos, cur);
 								emp.push(newPos);
-								while (!tmp.empty()) {
+								while(!tmp.empty()) {
 									emp.push(tmp.top());
 									tmp.pop();
 								}
@@ -417,60 +356,49 @@ void Astar(bool isH1) {
 					}
 					continue;
 				}
-				setParent(newPos, cur);
-				switch (sign) {
-				case 'M':
-					newPos.speed -= 0.1;
+
+				if(sign == 'M') {
+                    newPos.speed -= 0.1;
 					newPos.h = distance(newPos, isH1) / newPos.speed;
-					/* no break */
-				case ' ':
-					stateMap[newPos.y][newPos.x] = EXPLODING;
-					que.push(newPos);
-					break;
-				case 'G':
-					logPathLength(pathLog, newPos, iteration, true);
-					//dump to output file
-					isFound = true;
-					break;
 				}
 
+				setParent(newPos, cur);
+
+				if(sign == 'G') {
+					logPathLength(pathLog, newPos, iteration, true);
+					isFound = true;
+				} else {
+					curState = EXPLODING;
+					que.push(newPos);
+				}
 			}
 		}
-		logFrontier(searchLog, que);
+		if(iteration <= 100) {
+			logFrontier(searchLog, que);
+		}
 		++iteration;
 	}
-
-	if (isFound) {
+	if(isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
-
 }
 
 void BS(bool isH1) {
-
 	priority_queue<Point> frontier;
-
 	start.h = distance(start, isH1) / start.speed;
-	setFlag(start);
 	frontier.push(start);
-
-	Point zero;
-	zero.x = zero.y = zero.step = 0;
-	setParent(start, zero);
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-
-	while (!isFound && !frontier.empty()) {
+	while(!isFound && !frontier.empty()) {
 		Point cur = frontier.top();
 		frontier.pop();
 		logIteration(searchLog, iteration, cur, true);
-
-		if (cur.speed > 0) {
+		if(cur.speed > 0) {
 			int indexOfChildren = 0;
-			for (int j = 0; j < 4; ++j) {
+			for(int j = 0; j < 4; ++j) {
 				int newX = cur.x + delX[j];
 				int newY = cur.y + delY[j];
 				Point child = cur;
@@ -480,93 +408,78 @@ void BS(bool isH1) {
 				child.g += 1 / child.speed;
 				child.h = distance(child, isH1) / child.speed;
 				++child.step;
-
-				if (sign == '*') {
+				if(sign == '*') {
 					continue;
 				}
-
-				logChild(searchLog, indexOfChildren, child, false);
+				if(iteration <= 100) {
+					logChild(searchLog, indexOfChildren, child, false);
+				}
 				++indexOfChildren;
-
-				if (getFlag (child)) {
-					continue;
-				}
-				setParent(child, cur);
-				switch (sign) {
-				case 'M':
+				if(sign == 'M') {
 					child.speed -= 0.1;
 					child.h = distance(child, isH1) / child.speed;
-
-					/* no break */
-				case ' ':
-					setFlag(child);
+				}
+				if(findParent(child)) {
+					continue;
+				} else {
+					setParent(child, cur);
+				}
+				if(sign == 'G') {
+					logPathLength(pathLog, child, iteration, true);
+					isFound = true;
+				} else {
 					frontier.push(child);
-					if (frontier.size() > beamK) {
+					if(frontier.size() > beamK) {
 						priority_queue<Point> tmp;
 						int t = beamK;
-						while (t--) {
+						while(t--) {
 							tmp.push(frontier.top());
 							frontier.pop();
 						}
 						frontier = tmp;
 					}
-					break;
-				case 'G':
-
-					logPathLength(pathLog, child, iteration, true);
-					//dump to output file
-					isFound = true;
-					break;
 				}
-
 			}
 		}
-
-		logFrontier(searchLog, frontier);
+		if(iteration <= 100) {
+			logFrontier(searchLog, frontier);
+		}
 		++iteration;
 	}
-
-	if (isFound) {
+	if(isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
 }
 
 int main(int argc, char **argv) {
-
 	clock_t startT = clock();
 	string error = "arguments of the program are wrong!!!";
 	bool errorFlag = false;
 	int functionIndex;
-
 	ifstream input;
-
 	int width;
 	int height;
-
 	string tmp;
-
-	if (argc == 8) {
-		if (strcmp(argv[1], "BFS") == 0) {
+	if(argc == 8) {
+		if(strcmp(argv[1], "BFS") == 0) {
 			functionIndex = 0;
-		} else if (strcmp(argv[1], "DFS") == 0) {
+		} else if(strcmp(argv[1], "DFS") == 0) {
 			functionIndex = 1;
-		} else if (strcmp(argv[1], "Astar") == 0) {
+		} else if(strcmp(argv[1], "Astar") == 0) {
 			functionIndex = 2;
-		} else if (strcmp(argv[1], "Beam") == 0) {
+		} else if(strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
 		} else {
 			errorFlag = true;
 		}
-
-		if (!errorFlag) {
+		if(!errorFlag) {
 			start.speed = atof(argv[3]);
 			input.open(argv[5]);
 			output.open(argv[7]);
 		}
-
-	} else if (argc == 10) {
-		if (strcmp(argv[1], "Beam") == 0) {
+	} else if(argc == 10) {
+		if(strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
 			beamK = atoi(argv[3]);
 			start.speed = atof(argv[5]);
@@ -578,44 +491,42 @@ int main(int argc, char **argv) {
 	} else {
 		errorFlag = true;
 	}
-
-	if (errorFlag) {
+	if(errorFlag) {
 		cout << error << endl;
 		return -1;
 	}
-	start.g = 0.0f;
-
 	//get width
 	getline(input, tmp);
 	stringstream buffer(tmp);
 	buffer >> tmp;
 	buffer >> width;
-
 	//get height
 	getline(input, tmp);
 	stringstream buffer2(tmp);
 	buffer2 >> tmp;
 	buffer2 >> height;
-
 	//create maze
-	for (int i = 0; i < height; ++i) {
+	for(int i = 0; i < height; ++i) {
 		getline(input, tmp);
-		for (int j = 0; j < width; ++j) {
+		for(int j = 0; j < width; ++j) {
 			char cur = tmp[j];
 			maze[i][j] = cur;
-			if (cur == 'S') {
+			if(cur == 'S') {
 				start.x = j;
 				start.y = i;
-			} else if (cur == 'G') {
+			} else if(cur == 'G') {
 				goal.x = j;
 				goal.y = i;
 			}
 		}
 	}
-
 	start.step = 1;
-
-	switch (functionIndex) {
+	start.g = 0.0f;
+	Point zero;
+	zero.x = zero.y = zero.step = 0;
+	zero.speed = 0.0f;
+	setParent(start, zero);
+	switch(functionIndex) {
 	case 0:
 		//bfs
 		BFS();
@@ -633,9 +544,7 @@ int main(int argc, char **argv) {
 		BS(true);
 		break;
 	}
-
 	input.close();
 	output.close();
-
-	cout << (float) (clock() - startT) / CLOCKS_PER_SEC << endl;
+	cout << (float)(clock() - startT) / CLOCKS_PER_SEC << endl;
 }

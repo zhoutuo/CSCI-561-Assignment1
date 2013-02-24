@@ -39,7 +39,7 @@ Point start, goal;
 unsigned int beamK = 10;
 char maze[100][100];
 speed_map parentTable[100][100];
-int delX[4] = { 0, -1, 0, 1 };
+int delX[4] = { 0, 1, 0, -1 };
 int delY[4] = { -1, 0, 1, 0 };
 
 template<class T>
@@ -49,7 +49,6 @@ string fromNumber(T n) {
 	return ss.str();
 }
 
-
 void setParent(Point child, Point Parent) {
 	speed_map& cur = parentTable[child.y][child.x];
 	cur[child.speed] = Parent;
@@ -57,19 +56,17 @@ void setParent(Point child, Point Parent) {
 
 bool findParent(Point child) {
 	speed_map& cur = parentTable[child.y][child.x];
-	if(cur.find(child.speed) == cur.end()) {
+	if (cur.find(child.speed) == cur.end()) {
 		return false;
 	} else {
 		return true;
 	}
 }
 
-
 Point getParent(Point child) {
 	speed_map& cur = parentTable[child.y][child.x];
 	return cur[child.speed];
 }
-
 
 void logPoint(string& searchLog, Point cur, bool outputH) {
 	searchLog += "x = ";
@@ -80,7 +77,7 @@ void logPoint(string& searchLog, Point cur, bool outputH) {
 	searchLog += fromNumber(cur.speed);
 	searchLog += " g = ";
 	searchLog += fromNumber(cur.g);
-	if(outputH) {
+	if (outputH) {
 		searchLog += " f = ";
 		searchLog += fromNumber(cur.g + cur.h);
 	}
@@ -89,7 +86,7 @@ void logPoint(string& searchLog, Point cur, bool outputH) {
 
 void logIteration(string& searchLog, int iteration, Point cur, bool outputH) {
 	//logging
-	if(iteration <= 100) {
+	if (iteration <= 100) {
 		searchLog += "Iteration = ";
 		searchLog += fromNumber(iteration);
 		searchLog += '\n';
@@ -108,7 +105,7 @@ void logChild(string& searchLog, int index, Point cur, bool outputH) {
 
 void logFrontier(string& searchLog, deque<Point>& que) {
 	searchLog += "Frontier List:\n";
-	for(unsigned int i = 0; i < que.size(); ++i) {
+	for (unsigned int i = 0; i < que.size(); ++i) {
 		logChild(searchLog, i, que[i], false);
 	}
 	searchLog += '\n';
@@ -116,7 +113,7 @@ void logFrontier(string& searchLog, deque<Point>& que) {
 
 void logFrontier(string& searchLog, vector<Point>& stack) {
 	searchLog += "Frontier List:\n";
-	for(unsigned int i = 0; i < stack.size(); ++i) {
+	for (unsigned int i = 0; i < stack.size(); ++i) {
 		logChild(searchLog, i, stack[stack.size() - i - 1], false);
 	}
 	searchLog += '\n';
@@ -126,7 +123,7 @@ void logFrontier(string& searchLog, priority_queue<Point>& que) {
 	searchLog += "Frontier List:\n";
 	priority_queue<Point> tmp = que;
 	int index = 0;
-	while(!tmp.empty()) {
+	while (!tmp.empty()) {
 		Point cur = tmp.top();
 		tmp.pop();
 		logChild(searchLog, index++, cur, true);
@@ -135,7 +132,7 @@ void logFrontier(string& searchLog, priority_queue<Point>& que) {
 }
 
 void logPath(string& pathLog, Point cur, bool outputH) {
-	if(cur.step != 1) {
+	if (cur.step != 1) {
 		Point parent = getParent(cur);
 		logPath(pathLog, parent, outputH);
 	}
@@ -161,15 +158,15 @@ void BFS() {
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-	while(!isFound && !que.empty()) {
+	while (!isFound && !que.empty()) {
 		Point cur = que.front();
 		que.pop_front();
 		int x = cur.x;
 		int y = cur.y;
 		logIteration(searchLog, iteration, cur, false);
-		if(cur.speed > 0) {
+		if (cur.speed > 0) {
 			int indexOfChildren = 0;
-			for(int i = 0; i < 4; ++i) {
+			for (int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
 				char sign = maze[newY][newX];
@@ -178,22 +175,22 @@ void BFS() {
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if(sign == '*') {
+				if (sign == '*') {
 					continue;
 				}
-				if(iteration <= 100) {
+				if (iteration <= 100) {
 					logChild(searchLog, indexOfChildren, newPos, false);
 				}
 				++indexOfChildren;
-				if(sign == 'M') {
+				if (sign == 'M') {
 					newPos.speed -= 0.1;
 				}
-				if(findParent(newPos)) {
+				if (findParent(newPos)) {
 					continue;
 				} else {
 					setParent(newPos, cur);
 				}
-				if(sign == 'G') {
+				if (sign == 'G') {
 					logPathLength(pathLog, newPos, iteration, false);
 					isFound = true;
 				} else {
@@ -201,12 +198,12 @@ void BFS() {
 				}
 			}
 		}
-		if(iteration <= 100) {
+		if (iteration <= 100) {
 			logFrontier(searchLog, que);
 		}
 		++iteration;
 	}
-	if(isFound) {
+	if (isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
@@ -219,15 +216,15 @@ void DFS() {
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-	while(!isFound && !stack.empty()) {
+	while (!isFound && !stack.empty()) {
 		Point cur = stack.back();
 		stack.pop_back();
 		int x = cur.x;
 		int y = cur.y;
 		logIteration(searchLog, iteration, cur, false);
-		if(cur.speed > 0) {
+		if (cur.speed > 0) {
 			int indexOfChildren = 0;
-			for(int i = 0; i < 4; ++i) {
+			for (int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
 				char sign = maze[newY][newX];
@@ -236,22 +233,22 @@ void DFS() {
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if(sign == '*') {
+				if (sign == '*') {
 					continue;
 				}
-				if(iteration <= 100) {
+				if (iteration <= 100) {
 					logChild(searchLog, indexOfChildren, newPos, false);
 				}
 				++indexOfChildren;
-				if(sign == 'M') {
+				if (sign == 'M') {
 					newPos.speed -= 0.1;
 				}
-				if(findParent(newPos)) {
+				if (findParent(newPos)) {
 					continue;
 				} else {
 					setParent(newPos, cur);
 				}
-				if(sign == 'G') {
+				if (sign == 'G') {
 					logPathLength(pathLog, newPos, iteration, false);
 					isFound = true;
 				} else {
@@ -259,12 +256,12 @@ void DFS() {
 				}
 			}
 		}
-		if(iteration <= 100) {
+		if (iteration <= 100) {
 			logFrontier(searchLog, stack);
 		}
 		++iteration;
 	}
-	if(isFound) {
+	if (isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
@@ -273,7 +270,7 @@ void DFS() {
 float distance(Point cur, bool isH1) {
 	int delX = cur.x - goal.x;
 	int delY = cur.y - goal.y;
-	if(isH1) {
+	if (isH1) {
 		return abs(delX) + abs(delY);
 	} else {
 		return sqrt(delX * delX + delY * delY);
@@ -281,7 +278,7 @@ float distance(Point cur, bool isH1) {
 }
 
 enum AstarState {
-    UNEXPOLDED, EXPLODED, EXPLODING
+	UNEXPOLDED, EXPLODED, EXPLODING
 };
 
 typedef map<float, AstarState, classcmp> amap;
@@ -296,16 +293,16 @@ void Astar(bool isH1) {
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-	while(!isFound && !que.empty()) {
+	while (!isFound && !que.empty()) {
 		Point cur = que.top();
 		que.pop();
 		stateMap[cur.y][cur.x][cur.speed] = EXPLODED;
 		int x = cur.x;
 		int y = cur.y;
 		logIteration(searchLog, iteration, cur, true);
-		if(cur.speed > 0) {
+		if (cur.speed > 0) {
 			int indexOfChildren = 0;
-			for(int i = 0; i < 4; ++i) {
+			for (int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
 				char sign = maze[newY][newX];
@@ -314,38 +311,39 @@ void Astar(bool isH1) {
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if(sign == 'M') {
-                    newPos.speed -= 0.1;
+				if (sign == 'M') {
+					newPos.speed -= 0.1;
 				}
 				newPos.h = distance(newPos, isH1) / newPos.speed;
 
-				if(sign == '*') {
+				if (sign == '*') {
 					continue;
 				}
 				amap& curMap = stateMap[newPos.y][newPos.x];
 
 				//if it has not been found yet
-				if(curMap.find(newPos.speed) == curMap.end()) {
-                    curMap[newPos.speed] = UNEXPOLDED;
+				if (curMap.find(newPos.speed) == curMap.end()) {
+					curMap[newPos.speed] = UNEXPOLDED;
 				}
 				AstarState& curState = curMap[newPos.speed];
-				if(iteration <= 100) {
+				if (iteration <= 100) {
 					logChild(searchLog, indexOfChildren, newPos, true);
 				}
 				++indexOfChildren;
-				if(curState == EXPLODED) {
+				if (curState == EXPLODED) {
 					continue;
-				} else if(curState == EXPLODING) {
+				} else if (curState == EXPLODING) {
 					priority_queue<Point> tmp = que;
 					priority_queue<Point> emp;
-					while(true) {
+					while (true) {
 						Point top = tmp.top();
 						tmp.pop();
-						if(newPos.x == top.x && newPos.y == top.y && (abs(newPos.speed - top.speed) < (1e-5))) {
-							if(newPos.g < top.g) {
+						if (newPos.x == top.x && newPos.y == top.y
+								&& (abs(newPos.speed - top.speed) < (1e-5))) {
+							if (newPos.g < top.g) {
 								setParent(newPos, cur);
 								emp.push(newPos);
-								while(!tmp.empty()) {
+								while (!tmp.empty()) {
 									emp.push(tmp.top());
 									tmp.pop();
 								}
@@ -360,7 +358,7 @@ void Astar(bool isH1) {
 				}
 
 				setParent(newPos, cur);
-				if(sign == 'G') {
+				if (sign == 'G') {
 					logPathLength(pathLog, newPos, iteration, true);
 					isFound = true;
 				} else {
@@ -369,12 +367,12 @@ void Astar(bool isH1) {
 				}
 			}
 		}
-		if(iteration <= 100) {
+		if (iteration <= 100) {
 			logFrontier(searchLog, que);
 		}
 		++iteration;
 	}
-	if(isFound) {
+	if (isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
@@ -390,16 +388,16 @@ void BS(bool isH1) {
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-	while(!isFound && !que.empty()) {
+	while (!isFound && !que.empty()) {
 		Point cur = que.top();
 		que.pop();
 		stateMap[cur.y][cur.x][cur.speed] = EXPLODED;
 		int x = cur.x;
 		int y = cur.y;
 		logIteration(searchLog, iteration, cur, true);
-		if(cur.speed > 0) {
+		if (cur.speed > 0) {
 			int indexOfChildren = 0;
-			for(int i = 0; i < 4; ++i) {
+			for (int i = 0; i < 4; ++i) {
 				int newX = x + delX[i];
 				int newY = y + delY[i];
 				char sign = maze[newY][newX];
@@ -408,38 +406,39 @@ void BS(bool isH1) {
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
 				++newPos.step;
-				if(sign == 'M') {
-                    newPos.speed -= 0.1;
+				if (sign == 'M') {
+					newPos.speed -= 0.1;
 				}
 				newPos.h = distance(newPos, isH1) / newPos.speed;
 
-				if(sign == '*') {
+				if (sign == '*') {
 					continue;
 				}
 				amap& curMap = stateMap[newPos.y][newPos.x];
 
 				//if it has not been found yet
-				if(curMap.find(newPos.speed) == curMap.end()) {
-                    curMap[newPos.speed] = UNEXPOLDED;
+				if (curMap.find(newPos.speed) == curMap.end()) {
+					curMap[newPos.speed] = UNEXPOLDED;
 				}
 				AstarState& curState = curMap[newPos.speed];
-				if(iteration <= 100) {
+				if (iteration <= 100) {
 					logChild(searchLog, indexOfChildren, newPos, true);
 				}
 				++indexOfChildren;
-				if(curState == EXPLODED) {
+				if (curState == EXPLODED) {
 					continue;
-				} else if(curState == EXPLODING) {
+				} else if (curState == EXPLODING) {
 					priority_queue<Point> tmp = que;
 					priority_queue<Point> emp;
-					while(true) {
+					while (true) {
 						Point top = tmp.top();
 						tmp.pop();
-						if(newPos.x == top.x && newPos.y == top.y && (abs(newPos.speed - top.speed) < (1e-5))) {
-							if(newPos.g < top.g) {
+						if (newPos.x == top.x && newPos.y == top.y
+								&& (abs(newPos.speed - top.speed) < (1e-5))) {
+							if (newPos.g < top.g) {
 								setParent(newPos, cur);
 								emp.push(newPos);
-								while(!tmp.empty()) {
+								while (!tmp.empty()) {
 									emp.push(tmp.top());
 									tmp.pop();
 								}
@@ -455,21 +454,21 @@ void BS(bool isH1) {
 
 				setParent(newPos, cur);
 
-				if(sign == 'G') {
+				if (sign == 'G') {
 					logPathLength(pathLog, newPos, iteration, true);
 					isFound = true;
 				} else {
 					curState = EXPLODING;
 					que.push(newPos);
-					if(que.size() > beamK) {
+					if (que.size() > beamK) {
 						priority_queue<Point> tmp;
 						int t = beamK;
-						while(t--) {
+						while (t--) {
 							tmp.push(que.top());
 							que.pop();
 						}
 
-						while(!que.empty()) {
+						while (!que.empty()) {
 							Point top = que.top();
 							stateMap[top.y][top.x][top.speed] = EXPLODED;
 							que.pop();
@@ -480,12 +479,12 @@ void BS(bool isH1) {
 				}
 			}
 		}
-		if(iteration <= 100) {
+		if (iteration <= 100) {
 			logFrontier(searchLog, que);
 		}
 		++iteration;
 	}
-	if(isFound) {
+	if (isFound) {
 		output << pathLog;
 		output << searchLog;
 	}
@@ -500,25 +499,25 @@ int main(int argc, char **argv) {
 	int width;
 	int height;
 	string tmp;
-	if(argc == 8) {
-		if(strcmp(argv[1], "BFS") == 0) {
+	if (argc == 8) {
+		if (strcmp(argv[1], "BFS") == 0) {
 			functionIndex = 0;
-		} else if(strcmp(argv[1], "DFS") == 0) {
+		} else if (strcmp(argv[1], "DFS") == 0) {
 			functionIndex = 1;
-		} else if(strcmp(argv[1], "Astar") == 0) {
+		} else if (strcmp(argv[1], "Astar") == 0) {
 			functionIndex = 2;
-		} else if(strcmp(argv[1], "Beam") == 0) {
+		} else if (strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
 		} else {
 			errorFlag = true;
 		}
-		if(!errorFlag) {
+		if (!errorFlag) {
 			start.speed = atof(argv[3]);
 			input.open(argv[5]);
 			output.open(argv[7]);
 		}
-	} else if(argc == 10) {
-		if(strcmp(argv[1], "Beam") == 0) {
+	} else if (argc == 10) {
+		if (strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
 			beamK = atoi(argv[3]);
 			start.speed = atof(argv[5]);
@@ -530,7 +529,7 @@ int main(int argc, char **argv) {
 	} else {
 		errorFlag = true;
 	}
-	if(errorFlag) {
+	if (errorFlag) {
 		cout << error << endl;
 		return -1;
 	}
@@ -545,15 +544,15 @@ int main(int argc, char **argv) {
 	buffer2 >> tmp;
 	buffer2 >> height;
 	//create maze
-	for(int i = 0; i < height; ++i) {
+	for (int i = 0; i < height; ++i) {
 		getline(input, tmp);
-		for(int j = 0; j < width; ++j) {
+		for (int j = 0; j < width; ++j) {
 			char cur = tmp[j];
 			maze[i][j] = cur;
-			if(cur == 'S') {
+			if (cur == 'S') {
 				start.x = j;
 				start.y = i;
-			} else if(cur == 'G') {
+			} else if (cur == 'G') {
 				goal.x = j;
 				goal.y = i;
 			}
@@ -565,7 +564,7 @@ int main(int argc, char **argv) {
 	zero.x = zero.y = zero.step = 0;
 	zero.speed = 0.0f;
 	setParent(start, zero);
-	switch(functionIndex) {
+	switch (functionIndex) {
 	case 0:
 		//bfs
 		BFS();
@@ -585,5 +584,5 @@ int main(int argc, char **argv) {
 	}
 	input.close();
 	output.close();
-	cout << (float)(clock() - startT) / CLOCKS_PER_SEC << endl;
+	cout << (float) (clock() - startT) / CLOCKS_PER_SEC << endl;
 }

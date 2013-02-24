@@ -8,7 +8,6 @@
 #include <deque>
 #include <queue>
 #include <vector>
-#include <set>
 #include <map>
 #include <ctime>
 using namespace std;
@@ -285,7 +284,7 @@ enum AstarState {
     UNEXPOLDED, EXPLODED, EXPLODING
 };
 
-typedef map<float, AstarState> amap;
+typedef map<float, AstarState, classcmp> amap;
 
 void Astar(bool isH1) {
 	priority_queue<Point> que;
@@ -314,19 +313,22 @@ void Astar(bool isH1) {
 				newPos.x = newX;
 				newPos.y = newY;
 				newPos.g += 1 / newPos.speed;
-				newPos.h = distance(newPos, isH1) / newPos.speed;
 				++newPos.step;
-
-				amap& curMap = stateMap[newPos.y][newPos.x];
-
-				if(curMap.find(cur.speed) == curMap.end()) {
-                    curMap[cur.speed] = UNEXPOLDED;
+				if(sign == 'M') {
+                    newPos.speed -= 0.1;
 				}
+				newPos.h = distance(newPos, isH1) / newPos.speed;
 
-				AstarState& curState = curMap[cur.speed];
 				if(sign == '*') {
 					continue;
 				}
+				amap& curMap = stateMap[newPos.y][newPos.x];
+
+				//if it has not been found yet
+				if(curMap.find(newPos.speed) == curMap.end()) {
+                    curMap[newPos.speed] = UNEXPOLDED;
+				}
+				AstarState& curState = curMap[newPos.speed];
 				if(iteration <= 100) {
 					logChild(searchLog, indexOfChildren, newPos, true);
 				}
@@ -339,7 +341,7 @@ void Astar(bool isH1) {
 					while(true) {
 						Point top = tmp.top();
 						tmp.pop();
-						if(newPos.x == top.x && newPos.y == top.y && abs(newPos.speed - top.speed) < (1e-5)) {
+						if(newPos.x == top.x && newPos.y == top.y && (abs(newPos.speed - top.speed) < (1e-5))) {
 							if(newPos.g < top.g) {
 								setParent(newPos, cur);
 								emp.push(newPos);
@@ -357,13 +359,7 @@ void Astar(bool isH1) {
 					continue;
 				}
 
-				if(sign == 'M') {
-                    newPos.speed -= 0.1;
-					newPos.h = distance(newPos, isH1) / newPos.speed;
-				}
-
 				setParent(newPos, cur);
-
 				if(sign == 'G') {
 					logPathLength(pathLog, newPos, iteration, true);
 					isFound = true;
@@ -385,64 +381,107 @@ void Astar(bool isH1) {
 }
 
 void BS(bool isH1) {
-	priority_queue<Point> frontier;
+	priority_queue<Point> que;
+	amap stateMap[100][100];
 	start.h = distance(start, isH1) / start.speed;
-	frontier.push(start);
+	que.push(start);
+	stateMap[start.y][start.x][start.speed] = EXPLODING;
 	string searchLog = "Search log\n";
 	string pathLog = "";
 	int iteration = 1;
 	bool isFound = false;
-	while(!isFound && !frontier.empty()) {
-		Point cur = frontier.top();
-		frontier.pop();
+	while(!isFound && !que.empty()) {
+		Point cur = que.top();
+		que.pop();
+		stateMap[cur.y][cur.x][cur.speed] = EXPLODED;
+		int x = cur.x;
+		int y = cur.y;
 		logIteration(searchLog, iteration, cur, true);
 		if(cur.speed > 0) {
 			int indexOfChildren = 0;
-			for(int j = 0; j < 4; ++j) {
-				int newX = cur.x + delX[j];
-				int newY = cur.y + delY[j];
-				Point child = cur;
+			for(int i = 0; i < 4; ++i) {
+				int newX = x + delX[i];
+				int newY = y + delY[i];
 				char sign = maze[newY][newX];
-				child.x = newX;
-				child.y = newY;
-				child.g += 1 / child.speed;
-				child.h = distance(child, isH1) / child.speed;
-				++child.step;
+				Point newPos = cur;
+				newPos.x = newX;
+				newPos.y = newY;
+				newPos.g += 1 / newPos.speed;
+				++newPos.step;
+				if(sign == 'M') {
+                    newPos.speed -= 0.1;
+				}
+				newPos.h = distance(newPos, isH1) / newPos.speed;
+
 				if(sign == '*') {
 					continue;
 				}
+				amap& curMap = stateMap[newPos.y][newPos.x];
+
+				//if it has not been found yet
+				if(curMap.find(newPos.speed) == curMap.end()) {
+                    curMap[newPos.speed] = UNEXPOLDED;
+				}
+				AstarState& curState = curMap[newPos.speed];
 				if(iteration <= 100) {
-					logChild(searchLog, indexOfChildren, child, false);
+					logChild(searchLog, indexOfChildren, newPos, true);
 				}
 				++indexOfChildren;
-				if(sign == 'M') {
-					child.speed -= 0.1;
-					child.h = distance(child, isH1) / child.speed;
-				}
-				if(findParent(child)) {
+				if(curState == EXPLODED) {
 					continue;
-				} else {
-					setParent(child, cur);
+				} else if(curState == EXPLODING) {
+					priority_queue<Point> tmp = que;
+					priority_queue<Point> emp;
+					while(true) {
+						Point top = tmp.top();
+						tmp.pop();
+						if(newPos.x == top.x && newPos.y == top.y && (abs(newPos.speed - top.speed) < (1e-5))) {
+							if(newPos.g < top.g) {
+								setParent(newPos, cur);
+								emp.push(newPos);
+								while(!tmp.empty()) {
+									emp.push(tmp.top());
+									tmp.pop();
+								}
+								que = emp;
+							}
+							break;
+						} else {
+							emp.push(top);
+						}
+					}
+					continue;
 				}
+
+				setParent(newPos, cur);
+
 				if(sign == 'G') {
-					logPathLength(pathLog, child, iteration, true);
+					logPathLength(pathLog, newPos, iteration, true);
 					isFound = true;
 				} else {
-					frontier.push(child);
-					if(frontier.size() > beamK) {
+					curState = EXPLODING;
+					que.push(newPos);
+					if(que.size() > beamK) {
 						priority_queue<Point> tmp;
 						int t = beamK;
 						while(t--) {
-							tmp.push(frontier.top());
-							frontier.pop();
+							tmp.push(que.top());
+							que.pop();
 						}
-						frontier = tmp;
+
+						while(!que.empty()) {
+							Point top = que.top();
+							stateMap[top.y][top.x][top.speed] = EXPLODED;
+							que.pop();
+						}
+
+						que = tmp;
 					}
 				}
 			}
 		}
 		if(iteration <= 100) {
-			logFrontier(searchLog, frontier);
+			logFrontier(searchLog, que);
 		}
 		++iteration;
 	}

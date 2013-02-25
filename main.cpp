@@ -97,7 +97,7 @@ void logIteration(string& searchLog, int iteration, Point cur, bool outputH) {
 }
 
 void logChild(string& searchLog, int index, Point cur, bool outputH) {
-	searchLog += "index ";
+	searchLog += "index = ";
 	searchLog += fromNumber(index);
 	searchLog += ' ';
 	logPoint(searchLog, cur, outputH);
@@ -486,12 +486,12 @@ void BS(bool isH1) {
 	}
 	if (isFound) {
 		output << pathLog;
-		output << searchLog;
 	}
+	output << searchLog;
 }
 
 int main(int argc, char **argv) {
-	clock_t startT = clock();
+	//clock_t startT = clock();
 	string error = "arguments of the program are wrong!!!";
 	bool errorFlag = false;
 	int functionIndex;
@@ -584,5 +584,5 @@ int main(int argc, char **argv) {
 	}
 	input.close();
 	output.close();
-	cout << (float) (clock() - startT) / CLOCKS_PER_SEC << endl;
+	//cout << (float) (clock() - startT) / CLOCKS_PER_SEC << endl;
 }

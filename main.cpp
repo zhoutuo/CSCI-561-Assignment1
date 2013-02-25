@@ -504,7 +504,7 @@ int main(int argc, char **argv) {
 			functionIndex = 0;
 		} else if (strcmp(argv[1], "DFS") == 0) {
 			functionIndex = 1;
-		} else if (strcmp(argv[1], "Astar") == 0) {
+		} else if (strcmp(argv[1], "AStar") == 0) {
 			functionIndex = 2;
 		} else if (strcmp(argv[1], "Beam") == 0) {
 			functionIndex = 3;
